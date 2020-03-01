@@ -42,17 +42,12 @@ namespace SimpleRestApi
 
             bool isService = !Debugger.IsAttached && !args.Contains(CDebugArg);
 
-            //string workingDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
-            if (true)
-            {
-                //string path = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-                //workingDir = Path.Combine(path, CWorkingDirectory);
-                //Directory.CreateDirectory(workingDir);
-                //Directory.SetCurrentDirectory(workingDir);
-                var pathToExe = Process.GetCurrentProcess().MainModule.FileName;
-                var pathToContentRoot = System.IO.Path.GetDirectoryName(pathToExe);
-                System.IO.Directory.SetCurrentDirectory(pathToContentRoot);
-            }
+            //if (isService)
+            //{
+            //    var pathToExe = Process.GetCurrentProcess().MainModule.FileName;
+            //    var pathToContentRoot = System.IO.Path.GetDirectoryName(pathToExe);
+            //    System.IO.Directory.SetCurrentDirectory(pathToContentRoot);
+            //}
 
             //CreateHostBuilder(args).Build().Run();
             //IWebHost webHost = CreateWebHostBuilder(
@@ -61,13 +56,6 @@ namespace SimpleRestApi
             IWebHostBuilder webHostBuilder = CreateWebHostBuilder(
                 args.Where(x => x != CDebugArg).ToArray()
             );//.UseUrls(CAppUrl);
-
-            //if (isService)
-            //{
-            //    var pathToExe = Process.GetCurrentProcess().MainModule.FileName;
-            //    var pathToContentRoot = System.IO.Path.GetDirectoryName(pathToExe);
-            //    webHostBuilder.UseContentRoot(pathToContentRoot);
-            //}
 
             IWebHost webHost = webHostBuilder.Build();
 
@@ -91,8 +79,43 @@ namespace SimpleRestApi
         public static IWebHostBuilder CreateWebHostBuilder(string[] args)
         {
             return WebHost.CreateDefaultBuilder(args)
+                .UseKestrel(options =>
+                {
+                    options.Listen(System.Net.IPAddress.Loopback, 5001, listenOptions =>
+                    {
+                        /*
+                        string exePath = System.IO.Path.GetDirectoryName(
+                            System.Reflection.Assembly.GetExecutingAssembly().Location
+                        );
+                        listenOptions.UseHttps(
+                            exePath + "\\" + "<any exported certificate file>.<p12/pfx>",
+                            "Pass-123"
+                        );
+                        */
+                        listenOptions.UseHttps("D:\\Downloads\\CertASP.pfx", "Pass-123");
+                        //listenOptions.UseHttps("D:\\C#\\Projects\\localhostSvc.pfx", "Pass-123");
+                    });
+                })
                 .UseStartup<Startup>();
         }
+        /*
+        // Below is possible alternative to keep using the default plain CreateHostBuilder(args).Build().Run() instead of 
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder
+                    .ConfigureKestrel(serverOptions =>
+                    {
+                        serverOptions.Listen(IPAddress.Loopback, 5000);
+                        serverOptions.Listen(IPAddress.Loopback, 5001, listenOptions =>
+                        {
+                            listenOptions.UseHttps("testCert.pfx", "testPassword");
+                        });
+                    })
+                    .UseStartup<Startup>();
+                });
+        */
     }
 
     /*
