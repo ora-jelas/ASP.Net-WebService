@@ -48,14 +48,14 @@ namespace SimpleRestApi
 
             app.UseAuthorization();
 
-            var webSocketOptions = new WebSocketOptions()
-            {
-                KeepAliveInterval = TimeSpan.FromSeconds(120),
-                ReceiveBufferSize = 4 * 1024
-            };
-            webSocketOptions.AllowedOrigins.Add("http://localhost:58019");
-            app.UseWebSockets(webSocketOptions);
-            //app.UseWebSockets();
+            //var webSocketOptions = new WebSocketOptions()
+            //{
+            //    KeepAliveInterval = TimeSpan.FromSeconds(120),
+            //    ReceiveBufferSize = 4 * 1024
+            //};
+            //webSocketOptions.AllowedOrigins.Add("http://localhost:58019");
+            //app.UseWebSockets(webSocketOptions);
+            app.UseWebSockets();
 
             /*
               The Web Socket server side code below (including the "Echo" method) are following
@@ -63,6 +63,15 @@ namespace SimpleRestApi
               https://github.com/dotnet/AspNetCore.Docs/tree/master/aspnetcore/fundamentals/websockets/samples/1.x/WebSocketsSample
 
               To run the test page, open the URL: http://localhost:58019
+
+              To allow connection from external/remote machine:
+              1. In your solution dir, in the file .vs\config\applicationHost.config change the line
+                 <binding protocol="http" bindingInformation="*:58019:localhost" />
+                 to
+                 <binding protocol="http" bindingInformation=":58019:" />
+              2. From an administrator command prompt:
+                 i. netsh http add urlacl url=http://*:58019/ user=Everyone
+                 ii. netsh advfirewall firewall add rule name="IISExpress visualstudio app" protocol=tcp localport=58019 dir=in action=allow
             */
             app.Use(async (context, next) =>
             {
