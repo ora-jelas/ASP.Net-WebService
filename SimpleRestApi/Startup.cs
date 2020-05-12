@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using System.Net.WebSockets;
 using Microsoft.AspNetCore.Http;
 using System.Threading;
+using System.Text;
 
 namespace SimpleRestApi
 {
@@ -40,6 +41,7 @@ namespace SimpleRestApi
                 app.UseDeveloperExceptionPage();
             }
 
+            // Https redirection is turned off when using Web Socket because wss:// does not work.
             //app.UseHttpsRedirection();
 
             app.UseRouting();
@@ -55,6 +57,13 @@ namespace SimpleRestApi
             app.UseWebSockets(webSocketOptions);
             //app.UseWebSockets();
 
+            /*
+              The Web Socket server side code below (including the "Echo" method) are following
+              the example from:
+              https://github.com/dotnet/AspNetCore.Docs/tree/master/aspnetcore/fundamentals/websockets/samples/1.x/WebSocketsSample
+
+              To run the test page, open the URL: http://localhost:58019
+            */
             app.Use(async (context, next) =>
             {
                 if (context.Request.Path == "/ws")
@@ -88,9 +97,15 @@ namespace SimpleRestApi
         {
             var buffer = new byte[1024 * 4];
             WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            string originalMessage;
+            string confirmationMessage;
             while (!result.CloseStatus.HasValue)
             {
-                await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
+                originalMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                confirmationMessage = "Are you sure: " + originalMessage + "???";
+                buffer = Encoding.UTF8.GetBytes(confirmationMessage);
+
+                await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, confirmationMessage.Length), result.MessageType, result.EndOfMessage, CancellationToken.None);
 
                 result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             }
