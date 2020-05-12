@@ -79,23 +79,23 @@ namespace SimpleRestApi
         public static IWebHostBuilder CreateWebHostBuilder(string[] args)
         {
             return WebHost.CreateDefaultBuilder(args)
-                .UseKestrel(options =>
-                {
-                    options.Listen(System.Net.IPAddress.Loopback, 5001, listenOptions =>
-                    {
-                        /*
-                        string exePath = System.IO.Path.GetDirectoryName(
-                            System.Reflection.Assembly.GetExecutingAssembly().Location
-                        );
-                        listenOptions.UseHttps(
-                            exePath + "\\" + "<any exported certificate file>.<p12/pfx>",
-                            "Pass-123"
-                        );
-                        */
-                        listenOptions.UseHttps("D:\\Downloads\\CertASP.pfx", "Pass-123");
-                        //listenOptions.UseHttps("D:\\C#\\Projects\\localhostSvc.pfx", "Pass-123");
-                    });
-                })
+                //.UseKestrel(options =>
+                //{
+                //    options.Listen(System.Net.IPAddress.Loopback, 5001, listenOptions =>
+                //    {
+                //        /*
+                //        string exePath = System.IO.Path.GetDirectoryName(
+                //            System.Reflection.Assembly.GetExecutingAssembly().Location
+                //        );
+                //        listenOptions.UseHttps(
+                //            exePath + "\\" + "<any exported certificate file>.<p12/pfx>",
+                //            "Pass-123"
+                //        );
+                //        */
+                //        listenOptions.UseHttps("D:\\Downloads\\CertASP.pfx", "Pass-123");
+                //        //listenOptions.UseHttps("D:\\C#\\Projects\\localhostSvc.pfx", "Pass-123");
+                //    });
+                //})
                 .UseStartup<Startup>();
         }
         /*
