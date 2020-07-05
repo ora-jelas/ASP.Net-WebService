@@ -1,0 +1,141 @@
+// In Program.cs
+// Requires minimum .NET Framework 4.7.2.
+
+//
+private const string CServerCertName = "SELF-SIGNED SERVER CERT";
+private const int CServerPort = 5001;
+private static X509Certificate2 serverCert;
+//
+
+        public static void Main(string[] args)
+        {
+            ...
+
+            try
+            {
+                ...
+//
+                if (!CanFindServerCertificate(out serverCert))
+                {
+                    serverCert = GenerateSelfSignedServerCertificate(CServerCertName);
+                    AddCertToStore(serverCert);
+                }
+//
+                ...
+
+                if (isService)
+                {
+                    //webHost.RunAsCustomService();
+                    webHost.RunAsService();
+                }
+                else
+                {
+                    webHost.Run();
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Fatal(ex, "Error during start-up, exiting application");
+                throw;
+            }
+        }
+
+        private static bool CanFindServerCertificate(
+            out X509Certificate2 localMachinePersonalCert
+        )
+        {
+            bool canFind = false;
+            localMachinePersonalCert = null;
+
+            X509Store certStore = GetServerCertificateStore();
+            certStore.Open(OpenFlags.ReadWrite);
+            X509Certificate2Collection certificateCollection = certStore.Certificates.Find(
+                X509FindType.FindBySubjectName,
+                CServerCertName,
+                true
+            );
+            certStore.Close();
+
+            if (certificateCollection.Count > 0)
+            {
+                canFind = true;
+                localMachinePersonalCert = certificateCollection[0];
+            }
+
+            return canFind;
+        }
+
+        private static X509Store GetServerCertificateStore()
+        {
+            X509Store certStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
+            return certStore;
+        }
+
+        // Based on https://stackoverflow.com/questions/42786986/how-to-create-a-valid-self-signed-x509certificate2-programmatically-not-loadin
+        private static X509Certificate2 GenerateSelfSignedServerCertificate(string certificateName)
+        {
+            SubjectAlternativeNameBuilder sanBuilder = new SubjectAlternativeNameBuilder();
+            sanBuilder.AddIpAddress(IPAddress.Loopback);
+            sanBuilder.AddIpAddress(IPAddress.IPv6Loopback);
+            sanBuilder.AddDnsName("localhost");
+            sanBuilder.AddDnsName(Environment.MachineName);
+
+            X500DistinguishedName distinguishedName = new X500DistinguishedName($"CN={certificateName}");
+
+            using (RSA rsa = RSA.Create(2048))
+            {
+                var request = new CertificateRequest(
+                    distinguishedName,
+                    rsa,
+                    HashAlgorithmName.SHA256,
+                    RSASignaturePadding.Pkcs1
+                );
+
+                request.CertificateExtensions.Add(new X509KeyUsageExtension(
+                    X509KeyUsageFlags.DataEncipherment
+                        | X509KeyUsageFlags.KeyEncipherment
+                        | X509KeyUsageFlags.DigitalSignature,
+                    false
+                ));
+
+                request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+                    new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") },
+                    false
+                ));
+
+                request.CertificateExtensions.Add(sanBuilder.Build());
+
+                DateTime notBeforeDate = DateTime.UtcNow.AddDays(-1);
+                var certificate = request.CreateSelfSigned(
+                    new DateTimeOffset(notBeforeDate),
+                    new DateTimeOffset(notBeforeDate.AddYears(10))
+                );
+
+                certificate.FriendlyName = certificateName;
+
+                return new X509Certificate2(
+                    certificate.Export(X509ContentType.Pfx, "password"),
+                    "password",
+                    X509KeyStorageFlags.MachineKeySet
+                );
+            }
+        }
+
+        private static void AddCertToStore(X509Certificate2 cert)
+        {
+            X509Store certStore = GetServerCertificateStore();
+            certStore.Open(OpenFlags.ReadWrite);
+            certStore.Add(cert);
+            certStore.Close();
+        }
+
+        public static IWebHostBuilder CreateWebHostBuilder(string[] args)
+        {
+            return WebHost.CreateDefaultBuilder(args)
+            .UseKestrel(options => options.Listen(IPAddress.Loopback, CServerPort, listenOptions =>
+                {
+                    listenOptions.UseHttps(serverCert);
+                }
+            ))
+            .UseStartup<Startup>();
+        }
